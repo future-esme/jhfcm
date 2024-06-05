@@ -9,7 +9,6 @@ import { IJoke, Joke } from 'app/firebase/joke.model';
 import { publicVapidKey } from 'app/firebase/firebase.constants';
 import { ITopicSubscriptionResult } from 'app/firebase/topic-subscription-result.model';
 
-
 @Injectable({ providedIn: 'root' })
 export class FcmService {
   public resourceUrl = SERVER_API_URL + 'api/fcm/registration';
@@ -18,17 +17,13 @@ export class FcmService {
   // storage for FCM messages ...
   public jokes = new Subject<IJoke>();
 
-  constructor(
-    protected http: HttpClient,
-    protected angularFireMessaging: AngularFireMessaging,
-    protected alertService: AlertService
-  ) {
+  constructor(protected http: HttpClient, protected angularFireMessaging: AngularFireMessaging, protected alertService: AlertService) {
     this.angularFireMessaging.usePublicVapidKey(publicVapidKey).then(() => {
       this.getFcmToken();
     });
     this.angularFireMessaging.messages.subscribe((message: any) => {
       const joke = new Joke(message['data'].id, message['data'].joke, message['data'].seq, message['data'].ts);
-      this.jokes.next(joke)
+      this.jokes.next(joke);
     });
   }
 
@@ -54,35 +49,34 @@ export class FcmService {
   }
 
   subscribeToJokeTopic(): void {
-    this.http.post<ITopicSubscriptionResult>(`${this.resourceUrl}`, this.fcmToken, { observe: 'body' }).subscribe(
-      (result: ITopicSubscriptionResult) => {
-        if (result.success) {
+    this.http
+      .post<ITopicSubscriptionResult>(`${this.resourceUrl}?token=${this.fcmToken!}`, { observe: 'body' })
+      .subscribe((result: ITopicSubscriptionResult) => {
+        if (result.status === 200) {
           // eslint-disable-next-line no-console
-          console.log('--> Subscribed to topic: ', result.topic);
+          console.log('--> Subscribed to topic: ');
           this.alertService.addAlert({ type: 'success', message: 'fcm.topic.subscribe-success' });
         } else {
           // eslint-disable-next-line no-console
-          console.error('Failed to subscribe to Topic.', result.topic, result.errorCode);
+          console.error('Failed to subscribe to Topic.');
           this.alertService.addAlert({ type: 'warning', message: 'fcm.topic.subscribe-failed' });
         }
-      }
-    );
+      });
   }
 
   unsubscribeFromJokeTopic(): void {
-    this.http.put<ITopicSubscriptionResult>(`${this.resourceUrl}`, this.fcmToken, { observe: 'body' }).subscribe(
-      (result: ITopicSubscriptionResult) => {
-        if (result.success) {
+    this.http
+      .put<ITopicSubscriptionResult>(`${this.resourceUrl}`, { observe: 'body' })
+      .subscribe((result: ITopicSubscriptionResult) => {
+        if (result.status === 200) {
           // eslint-disable-next-line no-console
-          console.log('--> Unubscribed from topic: ', result.topic);
+          console.log('--> Unubscribed from topic: ');
           this.alertService.addAlert({ type: 'success', message: 'fcm.topic.unsubscribe-success' });
         } else {
           // eslint-disable-next-line no-console
-          console.error('Failed to unsubscribe from Topic.', result.topic, result.errorCode);
+          console.error('Failed to unsubscribe from Topic.');
           this.alertService.addAlert({ type: 'warning', message: 'fcm.topic.unsubscribe-failed' });
         }
-      }
-    );
+      });
   }
-
 }
